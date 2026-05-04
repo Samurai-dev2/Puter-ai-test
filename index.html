@@ -1,15 +1,42 @@
 <html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
 <body>
     <script src="https://js.puter.com/v2/"></script>
+    <!-- markdown renderer -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <div id="output">Thinking...</div>
     <script>
         puter.ai.chat(
             `A farmer has 3 fields. Field A produces 20% more wheat than Field B. 
             Field C produces 15% less than Fields A and B combined. 
             If the total production is 14,000 kg, how much does each field produce? 
             Show your step-by-step reasoning.`,
-            { model: "claude-opus-4-7" }
+            { model: "claude-3-5-sonnet" }
         ).then(response => {
-            puter.print(response.message.content[0].text);
+            const text = response.message.content[0].text;
+            // render markdown to HTML
+            document.getElementById('output').innerHTML = marked.parse(text);
         });
     </script>
 </body>
