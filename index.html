@@ -1,167 +1,100 @@
+<!doctype html>
 <html>
-<head>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        h1 {
-            color: white;
-            margin-bottom: 30px;
-            font-size: 2rem;
-            text-align: center;
-        }
-
-        .container {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 30px;
-            width: 100%;
-            max-width: 800px;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        textarea {
-            width: 100%;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.3);
-            background: rgba(255,255,255,0.1);
-            color: white;
-            font-size: 1rem;
-            resize: vertical;
-            min-height: 120px;
-            outline: none;
-        }
-
-        textarea::placeholder {
-            color: rgba(255,255,255,0.5);
-        }
-
-        button {
-            margin-top: 15px;
-            width: 100%;
-            padding: 15px;
-            border-radius: 10px;
-            border: none;
-            background: #e94560;
-            color: white;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        button:hover {
-            background: #c73652;
-        }
-
-        button:disabled {
-            background: #888;
-            cursor: not-allowed;
-        }
-
-        #output {
-            margin-top: 25px;
-            color: white;
-            line-height: 1.8;
-            display: none;
-        }
-
-        #output h1, #output h2, #output h3 {
-            margin: 15px 0 10px;
-            color: #e94560;
-        }
-
-        #output p {
-            margin-bottom: 10px;
-        }
-
-        #output table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-
-        #output th {
-            background: #e94560;
-            padding: 10px;
-            text-align: left;
-        }
-
-        #output td {
-            padding: 10px;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        #output tr:nth-child(even) {
-            background: rgba(255,255,255,0.05);
-        }
-
-        .loader {
-            display: none;
-            text-align: center;
-            color: white;
-            margin-top: 20px;
-            font-size: 1rem;
-        }
-
-        .loader span {
-            animation: dots 1.5s infinite;
-        }
-
-        @keyframes dots {
-            0%, 100% { opacity: 0; }
-            50% { opacity: 1; }
-        }
-    </style>
-</head>
-<body>
+  <body>
+    <!-- Puter client -->
     <script src="https://js.puter.com/v2/"></script>
-    <h1>🤖 Ask Claude AI</h1>
 
-    <div class="container">
-        <textarea id="userInput" placeholder="Ask me anything... e.g. A farmer has 3 fields..."></textarea>
-        <button id="askBtn" onclick="askClaude()">Ask Claude</button>
+    <!-- Dynamic style container (CSS will be generated & inserted here) -->
+    <style id="dynamic-css"></style>
 
-        <div class="loader" id="loader">
-            Claude is thinking<span>...</span>
-        </div>
+    <div style="padding: 16px; max-width: 900px; margin: 0 auto;">
+      <h2 class="title">AI Chat</h2>
 
-        <div id="output"></div>
+      <textarea id="userInput" rows="3" style="width: 100%; padding: 10px;"></textarea>
+
+      <button id="goBtn" style="margin-top: 10px; padding: 10px 14px;">
+        Generate + Chat
+      </button>
+
+      <div id="output" style="margin-top: 14px;"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
-          puter.ai.chat(
-            "Write a short poem about coding",
-            { model: "claude-haiku-4-5" }
-        ).then(response => {
-            puter.print("<h2>Using claude-haiku-4-5 model</h2>");
-            puter.print(response.message.content[0].text);
-        });
+      const userInputEl = document.getElementById("userInput");
+      const outputEl = document.getElementById("output");
+      const goBtn = document.getElementById("goBtn");
+      const cssEl = document.getElementById("dynamic-css");
 
-        // Using claude-opus-4-7 model
-        puter.ai.chat(
-            "Write a short poem about coding",
-            { model: "claude-opus-4-7" }
-        ).then(response => {
-            puter.print("<h2>Using claude-opus-4-7 model</h2>");
-            puter.print(response.message.content[0].text);
+      function escapeHtml(str) {
+        return (str ?? "").replace(/[&<>"']/g, (c) => {
+          const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+          return map[c] || c;
         });
+      }
+
+      function extractText(res) {
+        return (
+          res?.message?.content?.[0]?.text ??
+          res?.text ??
+          (typeof res === "string" ? res : JSON.stringify(res))
+        );
+      }
+
+      async function generateCssFromInput(userText) {
+        const cssPrompt = `
+Return ONLY raw CSS (no markdown, no \`\`\` blocks, no <style> tag) that styles this page:
+- body
+- .title
+- textarea
+- button
+- #output
+Use a theme that matches the tone/intent of this user input:
+"${userText}"
+
+Constraints:
+- Keep it safe and simple (colors, fonts, spacing, borders).
+- Do not use external resources (no @import, no URLs).
+`.trim();
+
+        const cssResp = await puter.ai.chat(cssPrompt, { model: "claude-sonnet-4.5" });
+        const cssText = extractText(cssResp);
+
+        return cssText;
+      }
+
+      goBtn.onclick = async () => {
+        outputEl.innerHTML = "";
+        goBtn.disabled = true;
+
+        try {
+          const userText = (userInputEl.value || "").trim();
+          if (!userText) {
+            outputEl.innerHTML = `<p style="color:red;">Please type something first.</p>`;
+            return;
+          }
+
+          // 1) Generate CSS based on the user's input
+          cssEl.textContent = await generateCssFromInput(userText);
+
+          // 2) Chat with streaming
+          const chatStream = await puter.ai.chat(userText, {
+            model: "claude-sonnet-4.5",
+            stream: true
+          });
+
+          outputEl.innerHTML += `<div class="title">Claude Sonnet 4.5:</div>`;
+
+          for await (const part of chatStream) {
+            const chunk = escapeHtml(part?.text);
+            outputEl.innerHTML += chunk.replaceAll("\n", "<br>");
+          }
+        } catch (e) {
+          outputEl.innerHTML = `<p style="color:red;">Error: ${escapeHtml(e?.message || String(e))}</p>`;
+          console.error(e);
+        } finally {
+          goBtn.disabled = false;
+        }
+      };
     </script>
-</body>
+  </body>
 </html>
