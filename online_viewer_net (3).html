@@ -1,0 +1,16 @@
+<html>
+<body>
+    <script src="https://js.puter.com/v2/"></script>
+    <script>
+        puter.ai.chat(
+            `A farmer has 3 fields. Field A produces 20% more wheat than Field B. 
+            Field C produces 15% less than Fields A and B combined. 
+            If the total production is 14,000 kg, how much does each field produce? 
+            Show your step-by-step reasoning.`,
+            { model: "claude-opus-4-7" }
+        ).then(response => {
+            puter.print(response.message.content[0].text);
+        });
+    </script>
+</body>
+</html>
