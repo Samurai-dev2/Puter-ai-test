@@ -1,42 +1,199 @@
 <html>
 <head>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 0 20px;
-            line-height: 1.6;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        table {
-            border-collapse: collapse;
+
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        .container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
             width: 100%;
+            max-width: 800px;
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 8px 12px;
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            outline: none;
         }
-        th {
-            background-color: #f0f0f0;
+
+        textarea::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        button {
+            margin-top: 15px;
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            background: #e94560;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #c73652;
+        }
+
+        button:disabled {
+            background: #888;
+            cursor: not-allowed;
+        }
+
+        #output {
+            margin-top: 25px;
+            color: white;
+            line-height: 1.8;
+            display: none;
+        }
+
+        #output h1, #output h2, #output h3 {
+            margin: 15px 0 10px;
+            color: #e94560;
+        }
+
+        #output p {
+            margin-bottom: 10px;
+        }
+
+        #output table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        #output th {
+            background: #e94560;
+            padding: 10px;
+            text-align: left;
+        }
+
+        #output td {
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        #output tr:nth-child(even) {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 1rem;
+        }
+
+        .loader span {
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
 <body>
+    <h1>🤖 Ask Claude AI</h1>
+
+    <div class="container">
+        <textarea id="userInput" placeholder="Ask me anything... e.g. A farmer has 3 fields..."></textarea>
+        <button id="askBtn" onclick="askClaude()">Ask Claude</button>
+
+        <div class="loader" id="loader">
+            Claude is thinking<span>...</span>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
     <script src="https://js.puter.com/v2/"></script>
-    <!-- markdown renderer -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <div id="output">Thinking...</div>
     <script>
-        puter.ai.chat(
-            `A farmer has 3 fields. Field A produces 20% more wheat than Field B. 
-            Field C produces 15% less than Fields A and B combined. 
-            If the total production is 14,000 kg, how much does each field produce? 
-            Show your step-by-step reasoning.`,
-            { model: "claude-3-5-sonnet" }
-        ).then(response => {
-            const text = response.message.content[0].text;
-            // render markdown to HTML
-            document.getElementById('output').innerHTML = marked.parse(text);
+        function askClaude() {
+            const input = document.getElementById('userInput').value.trim();
+            if (!input) return alert("Please enter a question!");
+
+            const btn = document.getElementById('askBtn');
+            const loader = document.getElementById('loader');
+            const output = document.getElementById('output');
+
+            // reset UI
+            btn.disabled = true;
+            btn.textContent = "Thinking...";
+            loader.style.display = "block";
+            output.style.display = "none";
+            output.innerHTML = "";
+
+            puter.ai.chat(input, { model: "claude-3-5-sonnet" })
+            .then(response => {
+                console.log("Response:", response);
+
+                let text = "";
+                if (typeof response === "string") {
+                    text = response;
+                } else if (response?.message?.content?.[0]?.text) {
+                    text = response.message.content[0].text;
+                } else if (response?.text) {
+                    text = response.text;
+                } else {
+                    text = JSON.stringify(response);
+                }
+
+                output.innerHTML = marked.parse(text);
+                output.style.display = "block";
+            })
+            .catch(err => {
+                output.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+                output.style.display = "block";
+                console.error(err);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = "Ask Claude";
+                loader.style.display = "none";
+            });
+        }
+
+        // allow pressing Enter + Ctrl to submit
+        document.getElementById('userInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) askClaude();
         });
     </script>
 </body>
